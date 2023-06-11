@@ -30,10 +30,10 @@ module Payments =
 module Orders =
   // basic types
   type CustmerId = CustomerId of int
+  type ProductId = ProductId of int
   type WidgetCode = WidgetCode of string
   type GizmoCode = GizmoCode of string
   type OrderId = OrderId of int
-  type OrderLine = OrderLine of string
   type UnitQuantity = UnitQuantity of int
   type KilogramQuantity = KilogramQuantity of decimal
   type EnvelopeContents = EnvelopeContents of string
@@ -64,6 +64,16 @@ module Orders =
   type OrderPlaced = OrderPlaced of bool
   type BillableOrderPlaced = BillableOrderPlaced of bool
   // composite types
+  [<NoEquality;NoComparison>]
+  type OrderLine = {
+    OrderId: OrderId
+    ProductId: ProductId
+    Qty: int
+  }
+  with
+  member this.Key =
+    (this.OrderId, this.ProductId)
+  end
   type Order = {
     OrderId: OrderId
     CustomerInfo: CustomerInfo
@@ -89,3 +99,21 @@ module Orders =
     OrderPlaced: OrderPlaced
     BiilableOrderPlaced: BillableOrderPlaced
   }
+
+module Contacts =
+  type PhoneNumber = PhoneNumber of string
+  type EmailAddress = EmailAddress of string
+  type ContactId = ContactId of int
+  [<CustomEquality; NoComparison>]
+  type Contact = {
+    ContactId: ContactId
+    PhoneNumber: PhoneNumber
+    EmailAddress: EmailAddress
+  }
+  with
+  override this.Equals(obj) =
+    match obj with
+    | :? Contact as c -> this.ContactId = c.ContactId
+    | _ -> false
+  override this.GetHashCode() =
+    hash this.ContactId

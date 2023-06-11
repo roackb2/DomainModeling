@@ -1,9 +1,8 @@
 #load "Common.Types.fsx"
 #load "OrderTaking.Types.fsx"
 #load "Shipping.Types.fsx"
-#load "Contacts.fsx"
 open OrderTaking.Orders
-open Contacts
+open OrderTaking.Contacts
 
 let printList1 aList =
   match aList with
@@ -49,3 +48,26 @@ let contact2 = {
 }
 
 printfn "is contact1 %A equal to %A: %b" contact1 contact2 (contact1 = contact2)
+
+let orderLine1 = {
+  OrderId = OrderId 1
+  ProductId = ProductId 1
+  Qty = 2
+}
+
+let orderLine2 = {
+  OrderId = OrderId 1
+  ProductId = ProductId 1
+  Qty = 5
+}
+
+printfn "comparing using Key: is orderLine1 %A equal to %A: %b" orderLine1 orderLine2 (orderLine1.Key = orderLine2.Key)
+
+// Immutability
+let initialContact = {
+  ContactId = ContactId 1
+  PhoneNumber = PhoneNumber "1234567890"
+  EmailAddress = EmailAddress "john@wick.com"
+}
+
+let updatedPerson = { initialContact with PhoneNumber = PhoneNumber "0987654321" }
