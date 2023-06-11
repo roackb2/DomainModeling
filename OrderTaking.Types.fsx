@@ -80,6 +80,9 @@ module Orders =
   type ValidateOrder = UnvalidatedOrder -> ValidationResponse<ValidatedOrder>
   type PlaceOrder = UnplacedOrder -> PlacedOrder
   type CalculatePrices = CalculatePricesInput -> PricedOrder
+  type SaveCustomer = CustomerInfo -> unit
+  type PayInvoice = UnpaidInvoice -> Payments.Payment -> PaidInvoice
+  type ConvertPaymentCurrency = Payments.Payment -> Payments.Currency -> Payments.Payment
   // Events
   type PlaceOrderEvent = {
     AcknowledgementSent: AcknowledgementSent

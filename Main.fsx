@@ -1,7 +1,9 @@
 #load "Common.Types.fsx"
 #load "OrderTaking.Types.fsx"
 #load "Shipping.Types.fsx"
-open OrderTaking
+#load "Contacts.fsx"
+open OrderTaking.Orders
+open Contacts
 
 let printList1 aList =
   match aList with
@@ -26,8 +28,24 @@ printList1 [1; 2]
 printList1 [1; 2; 3]
 printListRecurssive [1; 2; 3]
 
+// Value object equality
+let widgetCode1 = WidgetCode "W1234"
+let widgetCode2 = WidgetCode "W1234"
+printfn "are widgetCode1 %A and widgetCode2 equal %A %b" widgetCode1 widgetCode2 (widgetCode1 = widgetCode2)
 
-type SaveCustomer = Orders.CustomerInfo -> unit
-type PayInvoice = Orders.UnpaidInvoice -> Payments.Payment -> Orders.PaidInvoice
-type ConvertPaymentCurrency = Payments.Payment -> Payments.Currency -> Payments.Payment
+// Entity object equality
+let contactId = ContactId 1
 
+let contact1 = {
+  ContactId = contactId
+  PhoneNumber = PhoneNumber "1234567890"
+  EmailAddress = EmailAddress "aa@bb.com"
+}
+
+let contact2 = {
+  ContactId = contactId
+  PhoneNumber = PhoneNumber "0987654321"
+  EmailAddress = EmailAddress "bb@cc.com"
+}
+
+printfn "is contact1 %A equal to %A: %b" contact1 contact2 (contact1 = contact2)
