@@ -1,9 +1,11 @@
-module rec OrderTaking
+namespace OrderTaking.Domain
 
 #load "Common.Types.fsx"
 open Common
 
 module Payments =
+  type USD = USD
+  type EUD = EUD
   type CheckNumber = CheckNumber of int
   type CardNumber = CardNumber of string
   type CardType = Visa | MasterCard
@@ -28,33 +30,72 @@ module Payments =
     | PaymentProviderOffline
 
 module Orders =
-  // basic types
-  type CustmerId = CustomerId of int
-  type ProductId = ProductId of int
+  // Product Code related
   type WidgetCode = WidgetCode of string
+    // constraint: starts with "W" then 4 digits
   type GizmoCode = GizmoCode of string
-  type OrderId = OrderId of int
+    // constraint: starts with "G" then 3 digits
+  type ProductCode =
+    | Widget of WidgetCode
+    | Gizmo of GizmoCode
+
+  // Order Quantity related
   type UnitQuantity = UnitQuantity of int
   type KilogramQuantity = KilogramQuantity of decimal
+  type OrderQuantity =
+    | Unit of UnitQuantity
+    | Kilogram of KilogramQuantity
+
+  // Order related
+  type ProductId = ProductId of int
+  type OrderId = OrderId of int
+  type OrderLineId = OrderLineId of int
+  type CustomerId = CustomerId of int
+  type CustomerInfo = Undefined
+  type ShippingAddress = Undefined
+  type BillingAddress = Undefined
+  type Price = {
+    Currency: Payments.Currency
+    Amount: Payments.PaymentAmount
+  }
+  type BillingAmount = Undefined
+    [<NoEquality;NoComparison>]
+  type OrderLine = {
+    Id: OrderLineId // id for entity
+    OrderId: OrderId
+    ProductCode: ProductCode
+    OrderQuantity: OrderQuantity
+    Price: Price
+  }
+  with
+  member this.Key =
+    (this.OrderId, this.ProductCode)
+  end
+  type Order = {
+    Id: OrderId // id for entity
+    CustomerId: CustomerId // customer reference
+    ShppingAddress: ShippingAddress
+    BillingAddress: BillingAddress
+    OrderLines: OrderLine list
+    AmountToBill: BillingAmount
+  }
+  type UnvalidatedOrder = {
+    OrderId: string
+    CustomerInfo: CustomerInfo
+    ShippingAddress: ShippingAddress
+    // ...
+  }
+
   type EnvelopeContents = EnvelopeContents of string
   type QuoteForm = Undefined
   type OrderForm = Undefined
   type CategorizedMail =
     | Quote of QuoteForm
     | Order of OrderForm
-  type ProductCode =
-    | Widget of WidgetCode
-    | Gizmo of GizmoCode
-  type OrderQuantity =
-    | Unit of UnitQuantity
-    | Kilogram of KilogramQuantity
-  type CustomerInfo = Undefined
-  type ShippingAddress = Undefined
-  type BillingAddress = Undefined
-  type BillingAmount = Undefined
+
+
   type UnpaidInvoice = Undefined
   type PaidInvoice = Undefined
-  type UnvalidatedOrder = Undefined
   type ValidatedOrder = Undefined
   type UnplacedOrder = Undefined
   type PlacedOrder = Undefined
@@ -64,41 +105,28 @@ module Orders =
   type OrderPlaced = OrderPlaced of bool
   type BillableOrderPlaced = BillableOrderPlaced of bool
   // composite types
-  [<NoEquality;NoComparison>]
-  type OrderLine = {
-    OrderId: OrderId
-    ProductId: ProductId
-    Qty: int
-  }
-  with
-  member this.Key =
-    (this.OrderId, this.ProductId)
-  end
-  type Order = {
-    OrderId: OrderId
-    CustomerInfo: CustomerInfo
-    ShppingAddress: ShippingAddress
-    BillingAddress: BillingAddress
-    Lines: OrderLine list
-    AmountToBill: BillingAmount
-  }
+
   type CalculatePricesInput = {
     OrderForm: OrderForm
     ProductCatalog: ProductCatalog
   }
-  // Processes
-  type ValidateOrder = UnvalidatedOrder -> ValidationResponse<ValidatedOrder>
-  type PlaceOrder = UnplacedOrder -> PlacedOrder
-  type CalculatePrices = CalculatePricesInput -> PricedOrder
-  type SaveCustomer = CustomerInfo -> unit
-  type PayInvoice = UnpaidInvoice -> Payments.Payment -> PaidInvoice
-  type ConvertPaymentCurrency = Payments.Payment -> Payments.Currency -> Payments.Payment
   // Events
   type PlaceOrderEvent = {
     AcknowledgementSent: AcknowledgementSent
     OrderPlaced: OrderPlaced
     BiilableOrderPlaced: BillableOrderPlaced
   }
+  // Errors
+  type PlaceOrderError =
+  | ValidationError of ValidationError list
+  // Processes
+  type ValidateOrder = UnvalidatedOrder -> ValidationResponse<ValidatedOrder>
+  type PlaceOrder = UnvalidatedOrder -> Result<PlaceOrderEvent, PlaceOrderError>
+  type CalculatePrices = CalculatePricesInput -> PricedOrder
+  type SaveCustomer = CustomerInfo -> unit
+  type PayInvoice = UnpaidInvoice -> Payments.Payment -> PaidInvoice
+  type ConvertPaymentCurrency = Payments.Payment -> Payments.Currency -> Payments.Payment
+
 
 module Contacts =
   type PhoneNumber = PhoneNumber of string

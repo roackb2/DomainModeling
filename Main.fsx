@@ -1,8 +1,9 @@
 #load "Common.Types.fsx"
 #load "OrderTaking.Types.fsx"
 #load "Shipping.Types.fsx"
-open OrderTaking.Orders
-open OrderTaking.Contacts
+open OrderTaking.Domain.Payments
+open OrderTaking.Domain.Orders
+open OrderTaking.Domain.Contacts
 
 let printList1 aList =
   match aList with
@@ -50,15 +51,25 @@ let contact2 = {
 printfn "is contact1 %A equal to %A: %b" contact1 contact2 (contact1 = contact2)
 
 let orderLine1 = {
+  Id = OrderLineId 1
   OrderId = OrderId 1
-  ProductId = ProductId 1
-  Qty = 2
+  ProductCode = Widget (WidgetCode "W1234")
+  OrderQuantity = Unit (UnitQuantity 2)
+  Price = {
+    Currency = USD
+    Amount = PaymentAmount 3
+  }
 }
 
 let orderLine2 = {
+  Id = OrderLineId 1
   OrderId = OrderId 1
-  ProductId = ProductId 1
-  Qty = 5
+  ProductCode = Widget (WidgetCode "W1234")
+  OrderQuantity = Unit (UnitQuantity 5)
+  Price = {
+    Currency = USD
+    Amount = PaymentAmount 5
+  }
 }
 
 printfn "comparing using Key: is orderLine1 %A equal to %A: %b" orderLine1 orderLine2 (orderLine1.Key = orderLine2.Key)
