@@ -24,10 +24,10 @@ let rec printListRecurssive aList =
 printList1 [1]
 printList1 [1; 2]
 printList1 [1; 2; 3]
-printListRecurssive[1; 2; 3]
+printListRecurssive [1; 2; 3]
 
 
-type SaveCustomer = Orders.Customer -> unit
+type SaveCustomer = Orders.CustomerInfo -> unit
 type PayInvoice = Orders.UnpaidInvoice -> Payments.Payment -> Orders.PaidInvoice
 type ConvertPaymentCurrency = Payments.Payment -> Payments.Currency -> Payments.Payment
 

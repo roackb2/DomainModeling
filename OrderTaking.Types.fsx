@@ -1,5 +1,8 @@
 module rec OrderTaking
 
+#load "Common.Types.fsx"
+open Common
+
 module Payments =
   type CheckNumber = CheckNumber of int
   type CardNumber = CardNumber of string
@@ -25,17 +28,61 @@ module Payments =
     | PaymentProviderOffline
 
 module Orders =
-  type ProductCode = ProductCode of string
-  type OrderQuantity =
-    | UnitQuantity of int
-    | KilogramQuantity of decimal
-  type OrderId = OrderId of string
+  // basic types
+  type CustmerId = CustomerId of int
+  type WidgetCode = WidgetCode of string
+  type GizmoCode = GizmoCode of string
+  type OrderId = OrderId of int
   type OrderLine = OrderLine of string
+  type UnitQuantity = UnitQuantity of int
+  type KilogramQuantity = KilogramQuantity of decimal
+  type EnvelopeContents = EnvelopeContents of string
+  type QuoteForm = Undefined
+  type OrderForm = Undefined
+  type CategorizedMail =
+    | Quote of QuoteForm
+    | Order of OrderForm
+  type ProductCode =
+    | Widget of WidgetCode
+    | Gizmo of GizmoCode
+  type OrderQuantity =
+    | Unit of UnitQuantity
+    | Kilogram of KilogramQuantity
+  type CustomerInfo = Undefined
+  type ShippingAddress = Undefined
+  type BillingAddress = Undefined
+  type BillingAmount = Undefined
+  type UnpaidInvoice = Undefined
+  type PaidInvoice = Undefined
+  type UnvalidatedOrder = Undefined
+  type ValidatedOrder = Undefined
+  type UnplacedOrder = Undefined
+  type PlacedOrder = Undefined
+  type PricedOrder = Undefined
+  type ProductCatalog = Undefined
+  type AcknowledgementSent = AcknowledgementSent of bool
+  type OrderPlaced = OrderPlaced of bool
+  type BillableOrderPlaced = BillableOrderPlaced of bool
+  // composite types
   type Order = {
     OrderId: OrderId
+    CustomerInfo: CustomerInfo
+    ShppingAddress: ShippingAddress
+    BillingAddress: BillingAddress
     Lines: OrderLine list
+    AmountToBill: BillingAmount
   }
-  type Customer = Customer of string
-  type UnpaidInvoice = UnpaidInvoice of string
-  type PaidInvoice = PaidInvoice of string
-
+  type CalculatePricesInput = {
+    OrderForm: OrderForm
+    ProductCatalog: ProductCatalog
+  }
+  // Processes
+  type ValidateOrder = UnvalidatedOrder -> ValidationResponse<ValidatedOrder>
+  type PlaceOrder = UnplacedOrder -> PlacedOrder
+  type CalculatePrices = CalculatePricesInput -> PricedOrder
+  // Events
+  type PlaceOrderEvent = {
+    AcknowledgementSent: AcknowledgementSent
+    OrderPlaced: OrderPlaced
+    BiilableOrderPlaced: BillableOrderPlaced
+  }

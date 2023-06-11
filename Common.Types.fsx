@@ -1,3 +1,6 @@
+module Common
+
+type Undefined = exn
 type Option<'a> =
   | Some of 'a
   | None
@@ -9,3 +12,8 @@ type PersonalName = {
   MiddleInitial: Option<string>
   LastName: string
 }
+type ValidationError = {
+  FieldName: string
+  ErrorDescription: string
+}
+type ValidationResponse<'a> = Async<Result<'a, ValidationError list>>
