@@ -17,3 +17,7 @@ type ValidationError = {
   ErrorDescription: string
 }
 type ValidationResponse<'a> = Async<Result<'a, ValidationError list>>
+type NonEmptyList<'a>  = {
+  First: 'a
+  Rest: 'a list
+}

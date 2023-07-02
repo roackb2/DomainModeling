@@ -54,8 +54,10 @@ module Orders =
     | Widget of WidgetCode
     | Gizmo of GizmoCode
 
+  [<Measure>]
+  type kg
   // Order Quantity related
-  type KilogramQuantity = KilogramQuantity of decimal
+  type KilogramQuantity = KilogramQuantity of decimal<kg>
   type OrderQuantity =
     | Unit of UnitQuantity
     | Kilogram of KilogramQuantity
@@ -90,7 +92,7 @@ module Orders =
     CustomerId: CustomerId // customer reference
     ShppingAddress: ShippingAddress
     BillingAddress: BillingAddress
-    OrderLines: OrderLine list
+    OrderLines: NonEmptyList<OrderLine>
     AmountToBill: BillingAmount
   }
   type UnvalidatedOrder = {
