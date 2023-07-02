@@ -1,6 +1,8 @@
 #load "Common.Types.fsx"
 #load "OrderTaking.Types.fsx"
 #load "Shipping.Types.fsx"
+open Common
+open OrderTaking.Domain.UnitQuantity
 open OrderTaking.Domain.Payments
 open OrderTaking.Domain.Orders
 open OrderTaking.Domain.Contacts
@@ -54,10 +56,10 @@ let orderLine1 = {
   Id = OrderLineId 1
   OrderId = OrderId 1
   ProductCode = Widget (WidgetCode "W1234")
-  OrderQuantity = Unit (UnitQuantity 2)
+  OrderQuantity = Unit (CreateUnitQuantity 2)
   Price = {
     Currency = USD
-    Amount = PaymentAmount 3
+    Amount = PaymentAmount 3m
   }
 }
 
@@ -65,10 +67,10 @@ let orderLine2 = {
   Id = OrderLineId 1
   OrderId = OrderId 1
   ProductCode = Widget (WidgetCode "W1234")
-  OrderQuantity = Unit (UnitQuantity 5)
+  OrderQuantity = Unit (CreateUnitQuantity 5)
   Price = {
     Currency = USD
-    Amount = PaymentAmount 5
+    Amount = PaymentAmount 5m
   }
 }
 

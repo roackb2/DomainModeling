@@ -29,6 +29,21 @@ module Payments =
     | PaymentRejected
     | PaymentProviderOffline
 
+type UnitQuantity = private UnitQuantity of int
+module UnitQuantity =
+  let create qty =
+    if qty < 1 then
+      Error "Quantity cannot be negative"
+    else if qty > 1000 then
+      Error "Quantity cannot be greater than 1000"
+    else
+      Ok (UnitQuantity qty)
+  let value (UnitQuantity qty) = qty
+  let CreateUnitQuantity qty =
+    match create qty : Result<UnitQuantity,string>  with
+      | Ok qty -> qty
+      | Error msg -> failwith msg
+
 module Orders =
   // Product Code related
   type WidgetCode = WidgetCode of string
@@ -40,7 +55,6 @@ module Orders =
     | Gizmo of GizmoCode
 
   // Order Quantity related
-  type UnitQuantity = UnitQuantity of int
   type KilogramQuantity = KilogramQuantity of decimal
   type OrderQuantity =
     | Unit of UnitQuantity
