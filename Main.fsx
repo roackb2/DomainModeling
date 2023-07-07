@@ -84,3 +84,7 @@ let initialContact = {
 }
 
 let updatedPerson = { initialContact with PhoneNumber = PhoneNumber "0987654321" }
+
+let amount1 = PaymentAmount 2.0m
+let amount2 = PaymentAmount 3.0m
+let sum = amount1 + amount2

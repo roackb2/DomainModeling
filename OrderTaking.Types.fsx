@@ -17,7 +17,12 @@ module Payments =
     | Cash
     | Check of CheckNumber
     | CreditCard of CreditCardInfo
-  type PaymentAmount = PaymentAmount of decimal
+  type PaymentAmount = PaymentAmount of decimal with
+    static member Zero = PaymentAmount 0m
+    static member (+) (PaymentAmount a, PaymentAmount b) = PaymentAmount (a + b)
+    static member (-) (PaymentAmount a, PaymentAmount b) = PaymentAmount (a - b)
+    static member (*) (PaymentAmount a, PaymentAmount b) = PaymentAmount (a * b)
+    static member (/) (PaymentAmount a, PaymentAmount b) = PaymentAmount (a / b)
   type Currency = USD | EUR
   type Payment = {
     Amount: PaymentAmount
@@ -93,7 +98,7 @@ module Orders =
     ShppingAddress: ShippingAddress
     BillingAddress: BillingAddress
     OrderLines: NonEmptyList<OrderLine>
-    AmountToBill: BillingAmount
+    AmountToBill: Payments.PaymentAmount
   }
   type UnvalidatedOrder = {
     OrderId: string
@@ -142,7 +147,18 @@ module Orders =
   type SaveCustomer = CustomerInfo -> unit
   type PayInvoice = UnpaidInvoice -> Payments.Payment -> PaidInvoice
   type ConvertPaymentCurrency = Payments.Payment -> Payments.Currency -> Payments.Payment
-
+  let changeOrdlinePrice order orderLineId newPrice =
+    let orderLine = order.OrderLines.find (fun ol -> ol.Id = orderLineId)
+    let newOrderLine = { orderLine with Price = newPrice }
+    let newOrderLines = order.OrderLines.map (fun ol -> if ol.Id = orderLineId then newOrderLine else ol)
+    let prices = newOrderLines.map (fun ol -> match ol.Price.Amount with Payments.PaymentAmount a -> a)
+    let newAmountToBill = prices.toList |> List.sum |> Payments.PaymentAmount
+    let newOrder = {
+      order with
+        OrderLines = newOrderLines
+        AmountToBill = newAmountToBill
+      }
+    newOrder
 
 module Contacts =
   type PhoneNumber = PhoneNumber of string

@@ -17,7 +17,21 @@ type ValidationError = {
   ErrorDescription: string
 }
 type ValidationResponse<'a> = Async<Result<'a, ValidationError list>>
-type NonEmptyList<'a>  = {
+
+type NonEmptyList<'a> = {
   First: 'a
   Rest: 'a list
-}
+} with
+  member this.find predicate =
+    match this with
+      | { First = first; Rest = rest } -> if predicate(first) then first else this.find predicate
+  member this.map mapper =
+    match this with
+      | { First = first; Rest = rest } -> { First = mapper(first); Rest = List.map mapper rest }
+  member this.sumBy mapper =
+    match this with
+      | { First = first; Rest = rest } -> mapper(first) + List.sumBy mapper rest
+  member this.toList =
+    match this with
+      | { First = first; Rest = rest } -> first :: rest
+  end
