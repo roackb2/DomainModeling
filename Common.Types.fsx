@@ -7,6 +7,7 @@ type Option<'a> =
 type Result<'Success, 'Failure> =
   | Ok of 'Success
   | Error of 'Failure
+type AsyncResult<'Success, 'Failure> = Async<Result<'Success, 'Failure>>
 type PersonalName = {
   FirstName: string
   MiddleInitial: Option<string>
@@ -35,9 +36,6 @@ type NonEmptyList<'a> = {
     match this with
       | { First = first; Rest = rest } -> first :: rest
   end
-
-// type DateTime = private DateTime of int
-
 
 type Command<'a> = {
   Data: 'a

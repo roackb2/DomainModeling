@@ -210,18 +210,20 @@ module Orders =
       | Change of ChangeOrderCmd
       | Cancel of CancelOrderCmd
     type CheckProductCodeExists = ProductCode -> bool
-    type CheckAddressValid = UnvalidatedAddress -> Result<CheckedAddress, AddressValidationError>
+    // AsyncResult indicates that this service has both async and result side effects
+    type CheckAddressExists = UnvalidatedAddress -> AsyncResult<CheckedAddress, AddressValidationError>
     type ValidateOrder =
       CheckProductCodeExists -> // dependency
-        CheckAddressValid -> // dependency
+        CheckAddressExists -> // dependency
         UnvalidatedOrder -> // input
-        Result<ValidatedOrder, ValidationError> // output
+        AsyncResult<ValidatedOrder, ValidationError> // output
     // Pricing validation
+    type PricingError = PricingError of string
     type GetProductPrice = ProductCode -> Price
     type PriceOrder =
       GetProductPrice -> // dependency
         ValidatedOrder -> // input
-        PricedOrder
+        Result<PricedOrder, PricingError>  // result indicating that there might be pricing error cause pricing is an error-prone process
     type HtemlString = HtemlString of string
     type OrderAcknowledgement = {
       EmailAddress: Contacts.EmailAddress
@@ -229,12 +231,13 @@ module Orders =
     }
     type SentResult = Sent | NotSent
     type CreateOrderAcknowledgementLetter = PricedOrder -> HtemlString
-    type SendOrderAcknowledgement = CreateOrderAcknowledgementLetter -> SentResult
+    // Async indicating that sending acknowlecgement is doing a network IO, so there might be error, but we don't care about the actual error
+    type SendOrderAcknowledgement = CreateOrderAcknowledgementLetter -> Async<SentResult>
     type AcknowledgeOrder =
       CreateOrderAcknowledgementLetter -> // dependency
         SendOrderAcknowledgement -> // dependency
         PricedOrder -> // input
-        Events.OrderAcknowledgementSent option // output
+        Async<Events.OrderAcknowledgementSent option> // output
 
 module Shopping =
   type Item = {
