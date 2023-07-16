@@ -190,3 +190,32 @@ module Contacts =
     | _ -> false
   override this.GetHashCode() =
     hash this.ContactId
+
+module Shopping =
+  type Item = {
+    ItemId: string
+    Name: string
+    // ...
+  }
+  type ActiveCartData = {
+    UnpaidItems: Item list
+  }
+  type PaidCardData = {
+    PaidItems: Item list
+    Payment: Payments.Payment
+  }
+  type ShoppingCart =
+    | EmptyCart
+    | ActiveCart of ActiveCartData
+    | PaidCart of PaidCardData
+
+  let addItem cart item =
+    match cart with
+    | EmptyCart _ -> ActiveCart { UnpaidItems = [item] }
+    | ActiveCart { UnpaidItems = items } -> ActiveCart { UnpaidItems = item :: items }
+    | PaidCart _ -> failwith "Cannot add item to paid cart"
+  let makePayment cart payment =
+    match cart with
+    | EmptyCart _ -> failwith "Cannot pay for empty cart"
+    | ActiveCart { UnpaidItems = items } -> PaidCart { PaidItems = items; Payment = payment }
+    | PaidCart _ -> failwith "Cannot pay for already paid cart"

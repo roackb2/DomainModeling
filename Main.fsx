@@ -6,6 +6,7 @@ open OrderTaking.Domain.UnitQuantity
 open OrderTaking.Domain.Payments
 open OrderTaking.Domain.Orders
 open OrderTaking.Domain.Contacts
+open OrderTaking.Domain.Shopping
 
 let printList1 aList =
   match aList with
@@ -88,3 +89,18 @@ let updatedPerson = { initialContact with PhoneNumber = PhoneNumber "0987654321"
 let amount1 = PaymentAmount 2.0m
 let amount2 = PaymentAmount 3.0m
 let sum = amount1 + amount2
+
+let item = {
+  ItemId = "item_1"
+  Name = "Shampoo"
+}
+
+let myCart = EmptyCart
+let activeCart =  addItem myCart item
+let payment = {
+  Amount = PaymentAmount 2000.0m
+  Currency = USD
+  Method = Cash
+}
+let paidCart = makePayment activeCart payment
+printfn "paidCart: %A" paidCart
