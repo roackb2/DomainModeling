@@ -1,4 +1,4 @@
-module Common
+namespace Common.Types
 
 type Undefined = exn
 type Option<'a> =

@@ -1,12 +1,14 @@
-#load "Common.Types.fsx"
-#load "OrderTaking.Types.fsx"
+#load "Common/Types.fsx"
+#load "OrderTaking/BaseTypes.fsx"
+#load "OrderTaking/Api.fsx"
+#load "OrderTaking/Workflows.fsx"
 #load "Shipping.Types.fsx"
+
 open Common
-open OrderTaking.Domain.UnitQuantity
-open OrderTaking.Domain.Payments
-open OrderTaking.Domain.Orders
-open OrderTaking.Domain.Contacts
-open OrderTaking.Domain.Shopping
+open OrderTaking.BaseType.Contacts
+open OrderTaking.BaseType.Payments
+open OrderTaking.BaseType.Shopping
+open OrderTaking.BaseType.Orders
 
 let printList1 aList =
   match aList with
@@ -57,7 +59,7 @@ let orderLine1 = {
   Id = OrderLineId 1
   OrderId = OrderId 1
   ProductCode = Widget (WidgetCode "W1234")
-  OrderQuantity = Unit (CreateUnitQuantity 2)
+  OrderQuantity = Unit (UnitQuantity.CreateUnitQuantity 2)
   Price = {
     Currency = USD
     Amount = PaymentAmount 3m
