@@ -3,6 +3,25 @@ namespace OrderTaking.Domain
 #load "Common.Types.fsx"
 open Common
 
+module Contacts =
+  type PhoneNumber = PhoneNumber of string
+  type EmailAddress = EmailAddress of string
+  type ContactId = ContactId of int
+  [<CustomEquality; NoComparison>]
+  type Contact = {
+    ContactId: ContactId
+    PhoneNumber: PhoneNumber
+    EmailAddress: EmailAddress
+  }
+  with
+  override this.Equals(obj) =
+    match obj with
+    | :? Contact as c -> this.ContactId = c.ContactId
+    | _ -> false
+  override this.GetHashCode() =
+    hash this.ContactId
+
+
 module Payments =
   type USD = USD
   type EUD = EUD
@@ -137,26 +156,33 @@ module Orders =
   type PaidInvoice = Undefined
   type ProductCatalog = Undefined
   type AcknowledgementSent = AcknowledgementSent of bool
-  type OrderPlaced = OrderPlaced of bool
-  type BillableOrderPlaced = BillableOrderPlaced of bool
+  type OrderPlaced = PricedOrder
+  type BillableOrderPlaced = {
+    OrderId: OrderId
+    BillingAddress: BillingAddress
+    AmountToBill: BillingAmount
+  }
   // composite types
 
   type CalculatePricesInput = {
     OrderForm: OrderForm
     ProductCatalog: ProductCatalog
   }
-  // Events
-  type PlaceOrderEvent = {
-    AcknowledgementSent: AcknowledgementSent
-    OrderPlaced: OrderPlaced
-    BiilableOrderPlaced: BillableOrderPlaced
-  }
+  module Events =
+    type OrderAcknowledgementSent = {
+      OrderId: OrderId
+      EmailAddress: Contacts.EmailAddress
+    }
+    type PlaceOrderEvent =
+      | OrderPlaced of OrderPlaced
+      | BillableOrderPlaced of BillableOrderPlaced
+      | OrderAcknowledgementSent of OrderAcknowledgementSent
+    type CreateEvents = PricedOrder -> PlaceOrderEvent list
   // Errors
   type PlaceOrderError =
   | ValidationError of ValidationError list
   // Processes
-  type ValidateOrder = UnvalidatedOrder -> ValidationResponse<ValidatedOrder>
-  type PlaceOrder = UnvalidatedOrder -> Result<PlaceOrderEvent, PlaceOrderError>
+  type PlaceOrder = UnvalidatedOrder -> Result<Events.PlaceOrderEvent, PlaceOrderError>
   type CalculatePrices = CalculatePricesInput -> PricedOrder
   type SaveCustomer = CustomerInfo -> unit
   type PayInvoice = UnpaidInvoice -> Payments.Payment -> PaidInvoice
@@ -183,7 +209,6 @@ module Orders =
       | Place of PlaceOrderCmd
       | Change of ChangeOrderCmd
       | Cancel of CancelOrderCmd
-  module Validation =
     type CheckProductCodeExists = ProductCode -> bool
     type CheckAddressValid = UnvalidatedAddress -> Result<CheckedAddress, AddressValidationError>
     type ValidateOrder =
@@ -191,25 +216,25 @@ module Orders =
         CheckAddressValid -> // dependency
         UnvalidatedOrder -> // input
         Result<ValidatedOrder, ValidationError> // output
-
-
-module Contacts =
-  type PhoneNumber = PhoneNumber of string
-  type EmailAddress = EmailAddress of string
-  type ContactId = ContactId of int
-  [<CustomEquality; NoComparison>]
-  type Contact = {
-    ContactId: ContactId
-    PhoneNumber: PhoneNumber
-    EmailAddress: EmailAddress
-  }
-  with
-  override this.Equals(obj) =
-    match obj with
-    | :? Contact as c -> this.ContactId = c.ContactId
-    | _ -> false
-  override this.GetHashCode() =
-    hash this.ContactId
+    // Pricing validation
+    type GetProductPrice = ProductCode -> Price
+    type PriceOrder =
+      GetProductPrice -> // dependency
+        ValidatedOrder -> // input
+        PricedOrder
+    type HtemlString = HtemlString of string
+    type OrderAcknowledgement = {
+      EmailAddress: Contacts.EmailAddress
+      Letter: HtemlString
+    }
+    type SentResult = Sent | NotSent
+    type CreateOrderAcknowledgementLetter = PricedOrder -> HtemlString
+    type SendOrderAcknowledgement = CreateOrderAcknowledgementLetter -> SentResult
+    type AcknowledgeOrder =
+      CreateOrderAcknowledgementLetter -> // dependency
+        SendOrderAcknowledgement -> // dependency
+        PricedOrder -> // input
+        Events.OrderAcknowledgementSent option // output
 
 module Shopping =
   type Item = {
