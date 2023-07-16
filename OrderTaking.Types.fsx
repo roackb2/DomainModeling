@@ -73,6 +73,18 @@ module Orders =
   type OrderLineId = OrderLineId of int
   type CustomerId = CustomerId of int
   type CustomerInfo = Undefined
+  type BaseAddress = {
+    AddressLine1: string
+    AddressLine2: string
+    City: string
+    State: string
+    Country: string
+    PostalCode: string
+    // ...
+  }
+  type UnvalidatedAddress = UnvalidatedAddress of BaseAddress
+  type CheckedAddress = CheckedAddress of BaseAddress
+  type AddressValidationError = AddressValidationError of string
   type ShippingAddress = Undefined
   type BillingAddress = Undefined
   type Price = {
@@ -171,6 +183,14 @@ module Orders =
       | Place of PlaceOrderCmd
       | Change of ChangeOrderCmd
       | Cancel of CancelOrderCmd
+  module Validation =
+    type CheckProductCodeExists = ProductCode -> bool
+    type CheckAddressValid = UnvalidatedAddress -> Result<CheckedAddress, AddressValidationError>
+    type ValidateOrder =
+      CheckProductCodeExists -> // dependency
+        CheckAddressValid -> // dependency
+        UnvalidatedOrder -> // input
+        Result<ValidatedOrder, ValidationError> // output
 
 
 module Contacts =
