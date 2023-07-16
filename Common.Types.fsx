@@ -35,3 +35,12 @@ type NonEmptyList<'a> = {
     match this with
       | { First = first; Rest = rest } -> first :: rest
   end
+
+// type DateTime = private DateTime of int
+
+
+type Command<'a> = {
+  Data: 'a
+  Timestamp: System.DateTime
+  UserId: string
+}

@@ -92,7 +92,9 @@ module Orders =
   member this.Key =
     (this.OrderId, this.ProductCode)
   end
-  type Order = {
+
+  type ValidatedOrderLine = ValidatedOrderLine of OrderLine
+  type BaseOrder = {
     Id: OrderId // id for entity
     CustomerId: CustomerId // customer reference
     ShppingAddress: ShippingAddress
@@ -100,12 +102,16 @@ module Orders =
     OrderLines: NonEmptyList<OrderLine>
     AmountToBill: Payments.PaymentAmount
   }
-  type UnvalidatedOrder = {
-    OrderId: string
-    CustomerInfo: CustomerInfo
-    ShippingAddress: ShippingAddress
-    // ...
-  }
+  type UnvalidatedOrder = UnvalidatedOrder of BaseOrder
+  type UnplacedOrder = UnplacedOrder of BaseOrder
+  type ValidatedOrder = ValidatedOrder of BaseOrder
+  type PlacedOrder = PlacedOrder of BaseOrder
+  type PricedOrder = PricedOrder of BaseOrder
+  type Order =
+    | UnvalidatedOrder
+    | UnplacedOrder
+    | PlacedOrder
+    | PricedOrder
 
   type EnvelopeContents = EnvelopeContents of string
   type QuoteForm = Undefined
@@ -117,10 +123,6 @@ module Orders =
 
   type UnpaidInvoice = Undefined
   type PaidInvoice = Undefined
-  type ValidatedOrder = Undefined
-  type UnplacedOrder = Undefined
-  type PlacedOrder = Undefined
-  type PricedOrder = Undefined
   type ProductCatalog = Undefined
   type AcknowledgementSent = AcknowledgementSent of bool
   type OrderPlaced = OrderPlaced of bool
@@ -159,6 +161,17 @@ module Orders =
         AmountToBill = newAmountToBill
       }
     newOrder
+  module Workflow =
+  // the command
+    type PlaceOrderCmd = Command<UnvalidatedOrder>
+    type ChangeOrderCmd = Command<ValidatedOrder>
+    type CancelOrderCmd = Command<ValidatedOrder>
+
+    type OrderTakingCommmand =
+      | Place of PlaceOrderCmd
+      | Change of ChangeOrderCmd
+      | Cancel of CancelOrderCmd
+
 
 module Contacts =
   type PhoneNumber = PhoneNumber of string
