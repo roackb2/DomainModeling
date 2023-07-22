@@ -106,3 +106,9 @@ let payment = {
 }
 let paidCart = makePayment activeCart payment
 printfn "paidCart: %A" paidCart
+
+// Currying
+let add x y = x + y
+let addGenerator x = fun y -> x + y
+let add3 = addGenerator 3
+printfn "add3 4: %d" (add3 4) // ouputs 7
