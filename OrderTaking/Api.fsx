@@ -4,20 +4,37 @@ namespace OrderTaking.Api
 #load "BaseTypes.fsx"
 
 open Common.Types
-open OrderTaking.BaseType.Payments
-open OrderTaking.BaseType.Contacts
-open OrderTaking.BaseType.Orders
+open OrderTaking.BaseTypes.Payments
+open OrderTaking.BaseTypes.Contacts
+open OrderTaking.BaseTypes.Orders
 
 module InputData =
-  type UnvalidatedAddress = UnvalidatedAddress of BaseAddress
-  type UnvalidatedOrder = UnvalidatedOrder of BaseOrder
-  type UnplacedOrder = UnplacedOrder of BaseOrder
+  type UnvalidatedOrder = {
+    OrderId: OrderId // id for entity
+    CustomerInfo: UnvalidatedCustomerInfo
+    ShippingAddress: UnvalidatedAddress
+    BillingAddress: UnvalidatedAddress
+    OrderLines: NonEmptyList<UnvalidatedOrderLine>
+    AmountToBill: PaymentAmount
+  }
+  type UnplacedOrder = UnvalidatedOrder
+  type Order =
+    | UnvalidatedOrder
+    | UnplacedOrder
+    | PlacedOrder
+    | PricedOrder
 
 module OutputData =
-  type CheckedAddress = CheckedAddress of BaseAddress
-  type ValidatedOrderLine = ValidatedOrderLine of OrderLine
-  type ValidatedOrder = ValidatedOrder of BaseOrder
-  type PlacedOrder = PlacedOrder of BaseOrder
+  type ValidatedOrder = {
+    OrderId: OrderId // id for entity
+    CustomerInfo: CustomerInfo
+    ShippingAddress: ShippingAddress
+    BillingAddress: BillingAddress
+    OrderLines: NonEmptyList<ValidatedOrderLine>
+    AmountToBill: PaymentAmount
+  }
+  type PricedOrder = ValidatedOrder
+  type PlacedOrder = ValidatedOrder
   type AcknowledgementSent = AcknowledgementSent of bool
   type OrderPlaced = PricedOrder
   type BillableOrderPlaced = {

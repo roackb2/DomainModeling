@@ -1,5 +1,7 @@
 namespace Common.Types
 
+open System
+
 type Undefined = exn
 type Option<'a> =
   | Some of 'a
@@ -8,10 +10,27 @@ type Result<'Success, 'Failure> =
   | Ok of 'Success
   | Error of 'Failure
 type AsyncResult<'Success, 'Failure> = Async<Result<'Success, 'Failure>>
+module AsyncResult =
+  let resolve res = async { return res }
+type String50 = private String50 of string
+module String50 =
+  let create str =
+    if String.IsNullOrEmpty(str) then
+      failwith "String50 cannot be empty"
+    else if str.Length > 50 then
+      failwith "String50 cannot be longer than 50 characters"
+    else
+      String50 str
+  let createOption str =
+    if String.IsNullOrEmpty(str) then
+      None
+    else
+      Some (String50 str)
+  let value (String50 str) = str
 type PersonalName = {
-  FirstName: string
-  MiddleInitial: Option<string>
-  LastName: string
+  FirstName: String50
+  MiddleInitial: Option<String50>
+  LastName: String50
 }
 type ValidationError = {
   FieldName: string

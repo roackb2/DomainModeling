@@ -1,11 +1,23 @@
-namespace OrderTaking.BaseType
+namespace OrderTaking.BaseTypes
 
 #load "../Common/Types.fsx"
 open Common.Types
+open System
+open System.Text.RegularExpressions
 
 module Contacts =
   type PhoneNumber = PhoneNumber of string
-  type EmailAddress = EmailAddress of string
+  type EmailAddress = private EmailAddress of string
+  module EmailAddress =
+    let create str =
+      let regex = Regex(@"^([\w\.\-]+)@([\w\-]+)((\.(\w){2,3})+)$", RegexOptions.Compiled)
+      if String.IsNullOrEmpty(str) then
+        failwith "EmailAddress cannot be empty"
+      else if not (regex.IsMatch(str)) then
+        failwith "EmailAddress is not valid"
+      else
+        EmailAddress str
+    let value (EmailAddress str)  = str
   type ContactId = ContactId of int
   [<CustomEquality; NoComparison>]
   type Contact = {
@@ -94,10 +106,37 @@ module Orders =
   type ProductCode =
     | Widget of WidgetCode
     | Gizmo of GizmoCode
+  module ProductCode =
+    let create str =
+      if String.IsNullOrEmpty(str) then
+        failwith "ProductCode cannot be empty"
+      else if str.StartsWith("W") then
+        Widget (WidgetCode str)
+      else if str.StartsWith("G") then
+        Gizmo (GizmoCode str)
+      else
+        failwith "ProductCode must start with W or G"
+    let value = function
+      | Widget (WidgetCode str) -> str
+      | Gizmo (GizmoCode str) -> str
+
   [<Measure>]
   type kg
   // Order Quantity related
-  type KilogramQuantity = KilogramQuantity of decimal<kg>
+  type KilogramQuantity = private KilogramQuantity of decimal<kg>
+  module KilogramQuantity =
+    let create qty =
+      if qty < 0m<kg> then
+        Error "Quantity cannot be negative"
+      else if qty > 1000m<kg> then
+        Error "Quantity cannot be greater than 1000"
+      else
+        Ok (KilogramQuantity qty)
+    let value (KilogramQuantity qty) = qty
+    let CreateKilogramQuantity qty =
+      match create (qty * 1.0m<kg>) : Result<KilogramQuantity,string>  with
+        | Ok qty -> qty
+        | Error msg -> failwith msg
   type UnitQuantity = private UnitQuantity of int
   module UnitQuantity =
     let create qty =
@@ -117,52 +156,79 @@ module Orders =
     | Kilogram of KilogramQuantity
   // Order related
   type ProductId = ProductId of int
-  type OrderId = OrderId of int
-  type OrderLineId = OrderLineId of int
+  type OrderId = private OrderId of string
+  module OrderId =
+    let create str =
+      if String.IsNullOrEmpty(str) then
+        failwith "OrderId cannot be empty"
+      else if str.Length > 50 then
+        failwith "OrderId cannot be longer than 50 characters"
+      else
+        OrderId str
+    let value (OrderId str) = str
+
+  type OrderLineId = private OrderLineId of string
+  module OrderLineId =
+    let create str =
+      if String.IsNullOrEmpty(str) then
+        failwith "OrderLineId cannot be empty"
+      else if str.Length > 50 then
+        failwith "OrderLineId cannot be longer than 50 characters"
+      else
+        OrderLineId str
+    let value (OrderLineId str) = str
   type CustomerId = CustomerId of int
-  type CustomerInfo = Undefined
-  type BaseAddress = {
+  type UnvalidatedCustomerInfo = {
+    FirstName: string
+    LastName: string
+    EmailAddress: Contacts.EmailAddress
+  }
+  type CustomerInfo = {
+    PersonalName: PersonalName
+    EmailAddress: Contacts.EmailAddress
+  }
+  type UnvalidatedAddress = {
     AddressLine1: string
     AddressLine2: string
     City: string
     State: string
     Country: string
     PostalCode: string
-    // ...
   }
-  type ShippingAddress = ShippingAddress of BaseAddress
-  type BillingAddress = BillingAddress of BaseAddress
-  type OrderLine = {
-    Id: OrderLineId // id for entity
+  type CheckedAddress = {
+    AddressLine1: String50
+    AddressLine2: Option<String50>
+    City: String50
+    State: String50
+    Country: String50
+    PostalCode: String50
+  }
+  type ShippingAddress = ShippingAddress of CheckedAddress
+  type BillingAddress = BillingAddress of CheckedAddress
+  type UnvalidatedOrderLine = {
+    OrderLineId: OrderLineId // id for entity
     OrderId: OrderId
     ProductCode: ProductCode
-    OrderQuantity: OrderQuantity
+    Quantity: decimal
+    Price: Payments.Price
+  }
+    type ValidatedOrderLine = {
+    OrderLineId: OrderLineId // id for entity
+    OrderId: OrderId
+    ProductCode: ProductCode
+    Quantity: OrderQuantity
     Price: Payments.Price
   }
   with
   member this.Key =
     (this.OrderId, this.ProductCode)
   end
-  type BaseOrder = {
-    Id: OrderId // id for entity
-    CustomerId: CustomerId // customer reference
-    ShppingAddress: ShippingAddress
-    BillingAddress: BillingAddress
-    OrderLines: NonEmptyList<OrderLine>
-    AmountToBill: Payments.PaymentAmount
-  }
   type HtemlString = HtemlString of string
   type OrderAcknowledgement = {
     EmailAddress: Contacts.EmailAddress
     Letter: HtemlString
   }
   type SentResult = Sent | NotSent
-  type PricedOrder = PricedOrder of BaseOrder
-  type Order =
-    | UnvalidatedOrder
-    | UnplacedOrder
-    | PlacedOrder
-    | PricedOrder
 
 module Uncategorized =
   type EnvelopeContents = EnvelopeContents of string

@@ -5,10 +5,10 @@
 #load "Shipping.Types.fsx"
 
 open Common
-open OrderTaking.BaseType.Contacts
-open OrderTaking.BaseType.Payments
-open OrderTaking.BaseType.Shopping
-open OrderTaking.BaseType.Orders
+open OrderTaking.BaseTypes.Contacts
+open OrderTaking.BaseTypes.Payments
+open OrderTaking.BaseTypes.Shopping
+open OrderTaking.BaseTypes.Orders
 
 let printList1 aList =
   match aList with
@@ -44,22 +44,22 @@ let contactId = ContactId 1
 let contact1 = {
   ContactId = contactId
   PhoneNumber = PhoneNumber "1234567890"
-  EmailAddress = EmailAddress "aa@bb.com"
+  EmailAddress = EmailAddress.create "aa@bb.com"
 }
 
 let contact2 = {
   ContactId = contactId
   PhoneNumber = PhoneNumber "0987654321"
-  EmailAddress = EmailAddress "bb@cc.com"
+  EmailAddress = EmailAddress.create "bb@cc.com"
 }
 
 printfn "is contact1 %A equal to %A: %b" contact1 contact2 (contact1 = contact2)
 
 let orderLine1 = {
-  Id = OrderLineId 1
-  OrderId = OrderId 1
+  OrderLineId = OrderLineId.create "1"
+  OrderId = OrderId.create "1"
   ProductCode = Widget (WidgetCode "W1234")
-  OrderQuantity = Unit (UnitQuantity.CreateUnitQuantity 2)
+  Quantity = Unit (UnitQuantity.CreateUnitQuantity 2)
   Price = {
     Currency = USD
     Amount = PaymentAmount 3m
@@ -67,10 +67,10 @@ let orderLine1 = {
 }
 
 let orderLine2 = {
-  Id = OrderLineId 1
-  OrderId = OrderId 1
+  OrderLineId = OrderLineId.create "1"
+  OrderId = OrderId.create "1"
   ProductCode = Widget (WidgetCode "W1234")
-  OrderQuantity = Kilogram (KilogramQuantity 5.3m<kg>)
+  Quantity = Kilogram (KilogramQuantity.CreateKilogramQuantity 5.3m)
   Price = {
     Currency = USD
     Amount = PaymentAmount 5m
@@ -83,7 +83,7 @@ printfn "comparing using Key: is orderLine1 %A equal to %A: %b" orderLine1 order
 let initialContact = {
   ContactId = ContactId 1
   PhoneNumber = PhoneNumber "1234567890"
-  EmailAddress = EmailAddress "john@wick.com"
+  EmailAddress = EmailAddress.create "john@wick.com"
 }
 
 let updatedPerson = { initialContact with PhoneNumber = PhoneNumber "0987654321" }

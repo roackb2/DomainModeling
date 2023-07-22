@@ -4,9 +4,10 @@ namespace OrderTaking.Workflows
 #load "BaseTypes.fsx"
 #load "Api.fsx"
 open Common.Types
-open OrderTaking.BaseType.Payments
-open OrderTaking.BaseType.Orders
-open OrderTaking.BaseType.Uncategorized
+open OrderTaking.BaseTypes.Payments
+open OrderTaking.BaseTypes.Contacts
+open OrderTaking.BaseTypes.Orders
+open OrderTaking.BaseTypes.Uncategorized
 open OrderTaking.Api.InputData
 open OrderTaking.Api.OutputData
 open OrderTaking.Api.Errors
@@ -20,7 +21,6 @@ module Workflows =
       CheckAddressExists -> // dependency
       UnvalidatedOrder -> // input
       AsyncResult<ValidatedOrder, ValidationError> // output
-  // Pricing validation
   type GetProductPrice = ProductCode -> Price
   type PriceOrder =
     GetProductPrice -> // dependency
@@ -34,18 +34,124 @@ module Workflows =
       SendOrderAcknowledgement -> // dependency
       PricedOrder -> // input
       Async<Events.OrderAcknowledgementSent option> // output
+  type PlaceOrder = UnvalidatedOrder -> Result<Events.PlaceOrderEvent, PlaceOrderError>
+  module Validate =
+    let toCustomerInfo (customer: UnvalidatedCustomerInfo): CustomerInfo =
+      let firstName = customer.FirstName |> String50.create
+      let lastName = customer.LastName |> String50.create
+      let email = customer.EmailAddress |> EmailAddress.value |> EmailAddress.create
+
+      let personalName = {
+        FirstName = firstName
+        MiddleInitial = None
+        LastName = lastName
+      }
+      {
+        PersonalName = personalName
+        EmailAddress = email
+      }
+    let toAddress (checkAddressExists: CheckAddressExists) unvalidatedAddress =
+      let checkedAddress = checkAddressExists unvalidatedAddress |> Async.RunSynchronously
+      let address =
+        match checkedAddress with
+          | Ok (addr) -> addr
+          | Error error -> failwith "address validation error"
+      let addressLine2 =
+        match address.AddressLine2 with
+          | Some addressLine2 -> Some addressLine2
+          | None -> None
+      {
+        AddressLine1 = address.AddressLine1 |> String50.value |> String50.create
+        AddressLine2 = addressLine2
+        City = address.City |> String50.value |> String50.create
+        State = address.State |> String50.value |> String50.create
+        Country = address.Country |> String50.value |> String50.create
+        PostalCode = address.PostalCode |> String50.value |> String50.create
+      }
+    let toOrderQuantity productCode quantity =
+      match productCode with
+        | Widget _ ->
+          quantity
+          |> int
+          |> UnitQuantity.CreateUnitQuantity
+          |> Unit
+        | Gizmo _ ->
+          quantity
+          |> KilogramQuantity.CreateKilogramQuantity
+          |> Kilogram
+    let predicateToPassthru errMsg f x =
+      if f x then
+        x
+      else
+        failwith errMsg
+    let toProductCode (checkProductCodeExists: CheckProductCodeExists) productCode =
+      let errMsg = sprintf "Invalid product code: %s" productCode
+      let checkProduct = predicateToPassthru errMsg checkProductCodeExists
+      productCode
+        |> ProductCode.create
+        |> checkProduct
+
+    let toValidatedOrderLine checkProductCodeExists (unvalidatedOrderLine: UnvalidatedOrderLine) =
+      let orderLineId = unvalidatedOrderLine.OrderLineId |> OrderLineId.value |> OrderLineId.create
+      let productCode = unvalidatedOrderLine.ProductCode |> ProductCode.value |> toProductCode checkProductCodeExists
+      let quantity = unvalidatedOrderLine.Quantity |> toOrderQuantity productCode
+      let validatedOrderLine: ValidatedOrderLine = {
+        OrderLineId = orderLineId
+        OrderId = unvalidatedOrderLine.OrderId
+        ProductCode = productCode
+        Quantity = quantity
+        Price = unvalidatedOrderLine.Price
+      }
+      validatedOrderLine
+
+    let valdiateOrder: ValidateOrder =
+      fun checkProductCodeExists checkAddressExists unvalidatedOrder ->
+        let orderId =
+          OrderId.value unvalidatedOrder.OrderId
+          |> OrderId.create
+        let customerInfo =
+          unvalidatedOrder.CustomerInfo
+          |> toCustomerInfo
+        let shippingAddress =
+          unvalidatedOrder.ShippingAddress
+          |> toAddress checkAddressExists
+          |> ShippingAddress
+        let billingAddress =
+          unvalidatedOrder.BillingAddress
+          |> toAddress checkAddressExists
+          |> BillingAddress
+        let orderLines =
+          unvalidatedOrder.OrderLines.map(toValidatedOrderLine checkProductCodeExists)
+        let amountToBill =
+          unvalidatedOrder.AmountToBill
+        let validatedOrder: ValidatedOrder = {
+          OrderId = orderId
+          CustomerInfo = customerInfo
+          ShippingAddress = shippingAddress
+          BillingAddress = billingAddress
+          OrderLines = orderLines
+          AmountToBill = amountToBill
+        }
+        AsyncResult.resolve (Ok validatedOrder)
+  // let priceOrder: PriceOrder
+  // let acknowledgeOrder: AcknowledgeOrder
+  // let placeOrder unvalidatedOrder =
+  //   unvalidatedOrder
+  //   |> validateOrder
+  //   |> priceOrder
+  //   |> acknowledgeOrder
+  //   |> createEvents
 
 module Uncategorized =
   // Processes
-  type PlaceOrder = UnvalidatedOrder -> Result<Events.PlaceOrderEvent, PlaceOrderError>
   type CalculatePrices = CalculatePricesInput -> PricedOrder
   type SaveCustomer = CustomerInfo -> unit
   type PayInvoice = UnpaidInvoice -> Payment -> PaidInvoice
   type ConvertPaymentCurrency = Payment -> Currency -> Payment
   let changeOrdlinePrice order orderLineId newPrice =
-    let orderLine = order.OrderLines.find (fun ol -> ol.Id = orderLineId)
+    let orderLine = order.OrderLines.find (fun ol -> ol.OrderLineId = orderLineId)
     let newOrderLine = { orderLine with Price = newPrice }
-    let newOrderLines = order.OrderLines.map (fun ol -> if ol.Id = orderLineId then newOrderLine else ol)
+    let newOrderLines = order.OrderLines.map (fun ol -> if ol.OrderLineId = orderLineId then newOrderLine else ol)
     let prices = newOrderLines.map (fun ol -> match ol.Price.Amount with PaymentAmount a -> a)
     let newAmountToBill = prices.toList |> List.sum |> PaymentAmount
     let newOrder = {
