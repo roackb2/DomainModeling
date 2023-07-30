@@ -50,7 +50,7 @@ type NonEmptyList<'a> = {
       | { First = first; Rest = rest } -> { First = mapper(first); Rest = List.map mapper rest }
   member this.sumBy mapper =
     match this with
-      | { First = first; Rest = rest } -> mapper(first) + List.sumBy mapper rest
+      | { First = first; Rest = rest } -> mapper(first) * 1.0m + List.sumBy mapper rest
   member this.toList =
     match this with
       | { First = first; Rest = rest } -> first :: rest

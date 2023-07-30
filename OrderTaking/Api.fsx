@@ -33,7 +33,14 @@ module OutputData =
     OrderLines: NonEmptyList<ValidatedOrderLine>
     AmountToBill: PaymentAmount
   }
-  type PricedOrder = ValidatedOrder
+  type PricedOrder = {
+    OrderId: OrderId // id for entity
+    CustomerInfo: CustomerInfo
+    ShippingAddress: ShippingAddress
+    BillingAddress: BillingAddress
+    OrderLines: NonEmptyList<PricedOrderLine>
+    AmountToBill: PaymentAmount
+  }
   type PlacedOrder = ValidatedOrder
   type AcknowledgementSent = AcknowledgementSent of bool
   type OrderPlaced = PricedOrder

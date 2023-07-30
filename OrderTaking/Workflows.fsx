@@ -133,7 +133,39 @@ module Workflows =
           AmountToBill = amountToBill
         }
         AsyncResult.resolve (Ok validatedOrder)
-  // let priceOrder: PriceOrder
+  module Pricing =
+    let getProductPrice (productCode: ProductCode): Price =
+      failwith "not implemented"
+    let toPricedOrderLine getProductPrice (line: ValidatedOrderLine): PricedOrderLine =
+      let qty: OrderQuantity = line.Quantity
+      let price: Price = getProductPrice line.ProductCode
+      let linePrice =
+        match qty with
+          | Unit q -> decimal (UnitQuantity.value q) |> Price.multiply price
+          | Kilogram (q: KilogramQuantity) -> decimal (KilogramQuantity.value q) |> Price.multiply price
+      {
+        OrderLineId = line.OrderLineId
+        OrderId = line.OrderId
+        ProductCode = line.ProductCode
+        Quantity = line.Quantity
+        Price = linePrice
+      }
+    let priceOrder: PriceOrder =
+      fun getProductPrice validatedOrder ->
+        let lines =
+          validatedOrder.OrderLines.map (toPricedOrderLine getProductPrice)
+        let amountToBill =
+          lines.map (fun line -> line.Price)
+          |> BillingAmount.sumPrices
+        let pricedOrder: PricedOrder = {
+          OrderId = validatedOrder.OrderId
+          CustomerInfo = validatedOrder.CustomerInfo
+          ShippingAddress = validatedOrder.ShippingAddress
+          BillingAddress = validatedOrder.BillingAddress
+          OrderLines = lines
+          AmountToBill = amountToBill.Amount
+        }
+        Ok pricedOrder
   // let acknowledgeOrder: AcknowledgeOrder
   // let placeOrder unvalidatedOrder =
   //   unvalidatedOrder

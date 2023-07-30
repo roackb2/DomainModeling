@@ -53,6 +53,8 @@ module Payments =
     static member (-) (PaymentAmount a, PaymentAmount b) = PaymentAmount (a - b)
     static member (*) (PaymentAmount a, PaymentAmount b) = PaymentAmount (a * b)
     static member (/) (PaymentAmount a, PaymentAmount b) = PaymentAmount (a / b)
+  module PaymentAmount =
+    let value (PaymentAmount amt) = amt
   type Currency = USD | EUR
   type Payment = {
     Amount: PaymentAmount
@@ -67,7 +69,20 @@ module Payments =
     Currency: Currency
     Amount: PaymentAmount
   }
-  type BillingAmount = Undefined
+  module Price =
+    let multiply price qty =
+      {
+        Currency = price.Currency
+        Amount = PaymentAmount (PaymentAmount.value price.Amount * qty)
+      }
+  type BillingAmount = PaymentAmount
+  module BillingAmount =
+    let sumPrices (prices: NonEmptyList<Price>) =
+      let total = prices.sumBy (fun price -> PaymentAmount.value price.Amount)
+      {
+        Amount = PaymentAmount total
+        Currency = prices.First.Currency
+      }
 
 module Shopping =
   type Item = {
@@ -212,7 +227,18 @@ module Orders =
     Quantity: decimal
     Price: Payments.Price
   }
-    type ValidatedOrderLine = {
+  type ValidatedOrderLine = {
+    OrderLineId: OrderLineId // id for entity
+    OrderId: OrderId
+    ProductCode: ProductCode
+    Quantity: OrderQuantity
+    Price: Payments.Price
+  }
+  with
+  member this.Key =
+    (this.OrderId, this.ProductCode)
+  end
+  type PricedOrderLine = {
     OrderLineId: OrderLineId // id for entity
     OrderId: OrderId
     ProductCode: ProductCode
