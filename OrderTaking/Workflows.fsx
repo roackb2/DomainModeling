@@ -28,12 +28,12 @@ module Workflows =
       Result<PricedOrder, PricingError>  // result indicating that there might be pricing error cause pricing is an error-prone process
   type CreateOrderAcknowledgementLetter = PricedOrder -> HtemlString
   // Async indicating that sending acknowlecgement is doing a network IO, so there might be error, but we don't care about the actual error
-  type SendOrderAcknowledgement = CreateOrderAcknowledgementLetter -> Async<SentResult>
+  type SendOrderAcknowledgement = OrderAcknowledgement -> Async<SentResult>
   type AcknowledgeOrder =
     CreateOrderAcknowledgementLetter -> // dependency
       SendOrderAcknowledgement -> // dependency
       PricedOrder -> // input
-      Async<Events.OrderAcknowledgementSent option> // output
+      Option<Events.OrderAcknowledgementSent> // output
   type PlaceOrder = UnvalidatedOrder -> Result<Events.PlaceOrderEvent, PlaceOrderError>
   module Validate =
     let toCustomerInfo (customer: UnvalidatedCustomerInfo): CustomerInfo =
@@ -166,7 +166,24 @@ module Workflows =
           AmountToBill = amountToBill.Amount
         }
         Ok pricedOrder
-  // let acknowledgeOrder: AcknowledgeOrder
+  module Acknowledgement =
+    let acknowledgeOrder: AcknowledgeOrder =
+      fun createAcknowledgementLetter sendAcknowledgement pricedOrder ->
+        let letter = createAcknowledgementLetter pricedOrder
+        let acknowledgement = {
+          EmailAddress = pricedOrder.CustomerInfo.EmailAddress
+          Letter = letter
+        }
+        let res = Async.RunSynchronously (sendAcknowledgement acknowledgement)
+        match res with
+          | Sent ->
+            let acknowledgementSent: Events.OrderAcknowledgementSent = {
+              OrderId = pricedOrder.OrderId
+              EmailAddress = pricedOrder.CustomerInfo.EmailAddress
+            }
+            Some acknowledgementSent
+          | NotSent ->
+            None
   // let placeOrder unvalidatedOrder =
   //   unvalidatedOrder
   //   |> validateOrder
