@@ -1,7 +1,6 @@
 #load "Common/Types.fsx"
 #load "OrderTaking/BaseTypes.fsx"
-#load "OrderTaking/Api.fsx"
-#load "OrderTaking/Workflows.fsx"
+#load "OrderTaking/PlaceOrderWorkflow.fsx"
 #load "Shipping.Types.fsx"
 
 open Common

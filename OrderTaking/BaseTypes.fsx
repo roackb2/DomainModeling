@@ -211,16 +211,7 @@ module Orders =
     Country: string
     PostalCode: string
   }
-  type CheckedAddress = {
-    AddressLine1: String50
-    AddressLine2: Option<String50>
-    City: String50
-    State: String50
-    Country: String50
-    PostalCode: String50
-  }
-  type ShippingAddress = ShippingAddress of CheckedAddress
-  type BillingAddress = BillingAddress of CheckedAddress
+
   type UnvalidatedOrderLine = {
     OrderLineId: OrderLineId // id for entity
     OrderId: OrderId
@@ -228,17 +219,7 @@ module Orders =
     Quantity: decimal
     Price: Payments.Price
   }
-  type ValidatedOrderLine = {
-    OrderLineId: OrderLineId // id for entity
-    OrderId: OrderId
-    ProductCode: ProductCode
-    Quantity: OrderQuantity
-    Price: Payments.Price
-  }
-  with
-  member this.Key =
-    (this.OrderId, this.ProductCode)
-  end
+
   type PricedOrderLine = {
     OrderLineId: OrderLineId // id for entity
     OrderId: OrderId
@@ -250,12 +231,6 @@ module Orders =
   member this.Key =
     (this.OrderId, this.ProductCode)
   end
-  type HtemlString = HtemlString of string
-  type OrderAcknowledgement = {
-    EmailAddress: Contacts.EmailAddress
-    Letter: HtemlString
-  }
-  type SentResult = Sent | NotSent
 
 module Uncategorized =
   type EnvelopeContents = EnvelopeContents of string
