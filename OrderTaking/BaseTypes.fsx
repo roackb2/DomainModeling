@@ -83,6 +83,7 @@ module Payments =
         Amount = PaymentAmount total
         Currency = prices.First.Currency
       }
+    let value (PaymentAmount amt) = amt
 
 module Shopping =
   type Item = {

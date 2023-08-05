@@ -3,9 +3,7 @@ namespace Common.Types
 open System
 
 type Undefined = exn
-type Option<'a> =
-  | Some of 'a
-  | None
+
 type Result<'Success, 'Failure> =
   | Ok of 'Success
   | Error of 'Failure

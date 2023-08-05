@@ -43,13 +43,13 @@ module OutputData =
   }
   type PlacedOrder = ValidatedOrder
   type AcknowledgementSent = AcknowledgementSent of bool
-  type OrderPlaced = PricedOrder
-  type BillableOrderPlaced = {
-    OrderId: OrderId
-    BillingAddress: BillingAddress
-    AmountToBill: BillingAmount
-  }
-  module Events =
+  module PlaceOrderEvents =
+    type OrderPlaced = PricedOrder
+    type BillableOrderPlaced = {
+      OrderId: OrderId
+      BillingAddress: BillingAddress
+      AmountToBill: BillingAmount
+    }
     type OrderAcknowledgementSent = {
       OrderId: OrderId
       EmailAddress: EmailAddress
@@ -57,8 +57,11 @@ module OutputData =
     type PlaceOrderEvent =
       | OrderPlaced of OrderPlaced
       | BillableOrderPlaced of BillableOrderPlaced
-      | OrderAcknowledgementSent of OrderAcknowledgementSent
-    type CreateEvents = PricedOrder -> PlaceOrderEvent list
+      | AcknowledgementSent of OrderAcknowledgementSent
+    type CreateEvents =
+      PricedOrder
+        -> OrderAcknowledgementSent option
+        -> PlaceOrderEvent list
 
 module Errors =
   type AddressValidationError = AddressValidationError of string

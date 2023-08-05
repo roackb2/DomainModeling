@@ -33,8 +33,8 @@ module Workflows =
     CreateOrderAcknowledgementLetter -> // dependency
       SendOrderAcknowledgement -> // dependency
       PricedOrder -> // input
-      Option<Events.OrderAcknowledgementSent> // output
-  type PlaceOrder = UnvalidatedOrder -> Result<Events.PlaceOrderEvent, PlaceOrderError>
+      Option<PlaceOrderEvents.OrderAcknowledgementSent> // output
+  type PlaceOrder = UnvalidatedOrder -> Result<PlaceOrderEvents.PlaceOrderEvent, PlaceOrderError>
   module Validate =
     let toCustomerInfo (customer: UnvalidatedCustomerInfo): CustomerInfo =
       let firstName = customer.FirstName |> String50.create
@@ -104,7 +104,7 @@ module Workflows =
       }
       validatedOrderLine
 
-    let valdiateOrder: ValidateOrder =
+    let validateOrder: ValidateOrder =
       fun checkProductCodeExists checkAddressExists unvalidatedOrder ->
         let orderId =
           OrderId.value unvalidatedOrder.OrderId
@@ -133,6 +133,7 @@ module Workflows =
           AmountToBill = amountToBill
         }
         AsyncResult.resolve (Ok validatedOrder)
+  open Validate
   module Pricing =
     let getProductPrice (productCode: ProductCode): Price =
       failwith "not implemented"
@@ -177,13 +178,48 @@ module Workflows =
         let res = Async.RunSynchronously (sendAcknowledgement acknowledgement)
         match res with
           | Sent ->
-            let acknowledgementSent: Events.OrderAcknowledgementSent = {
+            let acknowledgementSent: PlaceOrderEvents.OrderAcknowledgementSent = {
               OrderId = pricedOrder.OrderId
               EmailAddress = pricedOrder.CustomerInfo.EmailAddress
             }
             Some acknowledgementSent
           | NotSent ->
             None
+  let createBillingEvents (placedOrder: PricedOrder): PlaceOrderEvents.BillableOrderPlaced option =
+    let billingAmount = placedOrder.AmountToBill |> BillingAmount.value
+    if billingAmount > 0m then
+      let order: PlaceOrderEvents.BillableOrderPlaced = {
+        OrderId = placedOrder.OrderId
+        BillingAddress = placedOrder.BillingAddress
+        AmountToBill = placedOrder.AmountToBill
+      }
+      Some order
+    else
+      None
+  let createEvents: PlaceOrderEvents.CreateEvents =
+    let listOfOption opt =
+      match opt with
+        | Some x -> [x]
+        | None -> []
+    fun pricedOrder acknowledgementSentOpt ->
+      let events1 =
+        pricedOrder
+        |> PlaceOrderEvents.OrderPlaced
+        |> List.singleton
+      let events2 =
+        acknowledgementSentOpt
+        |> Option.map PlaceOrderEvents.AcknowledgementSent
+        |> listOfOption
+      let events3 =
+        pricedOrder
+        |> createBillingEvents
+        |> Option.map PlaceOrderEvents.BillableOrderPlaced
+        |> listOfOption
+      [
+        yield! events1
+        yield! events2
+        yield! events3
+      ]
   // let placeOrder unvalidatedOrder =
   //   unvalidatedOrder
   //   |> validateOrder
