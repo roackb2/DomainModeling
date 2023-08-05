@@ -65,7 +65,7 @@ module OutputData =
 
 module Errors =
   type AddressValidationError = AddressValidationError of string
-  type PricingError = PricingError of string
+  type PricingError = PricingError of ValidationError
   type PlaceOrderError =
     | ValidationError of ValidationError list
 

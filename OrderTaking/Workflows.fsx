@@ -20,12 +20,12 @@ module Workflows =
     CheckProductCodeExists -> // dependency
       CheckAddressExists -> // dependency
       UnvalidatedOrder -> // input
-      AsyncResult<ValidatedOrder, ValidationError> // output
+      ValidatedOrder // output
   type GetProductPrice = ProductCode -> Price
   type PriceOrder =
     GetProductPrice -> // dependency
       ValidatedOrder -> // input
-      Result<PricedOrder, PricingError>  // result indicating that there might be pricing error cause pricing is an error-prone process
+      PricedOrder // result indicating that there might be pricing error cause pricing is an error-prone process
   type CreateOrderAcknowledgementLetter = PricedOrder -> HtemlString
   // Async indicating that sending acknowlecgement is doing a network IO, so there might be error, but we don't care about the actual error
   type SendOrderAcknowledgement = OrderAcknowledgement -> Async<SentResult>
@@ -34,7 +34,7 @@ module Workflows =
       SendOrderAcknowledgement -> // dependency
       PricedOrder -> // input
       Option<PlaceOrderEvents.OrderAcknowledgementSent> // output
-  type PlaceOrder = UnvalidatedOrder -> Result<PlaceOrderEvents.PlaceOrderEvent, PlaceOrderError>
+  type PlaceOrder = UnvalidatedOrder -> Result<PlaceOrderEvents.PlaceOrderEvent list, PlaceOrderError>
   module Validate =
     let toCustomerInfo (customer: UnvalidatedCustomerInfo): CustomerInfo =
       let firstName = customer.FirstName |> String50.create
@@ -132,8 +132,7 @@ module Workflows =
           OrderLines = orderLines
           AmountToBill = amountToBill
         }
-        AsyncResult.resolve (Ok validatedOrder)
-  open Validate
+        validatedOrder
   module Pricing =
     let getProductPrice (productCode: ProductCode): Price =
       failwith "not implemented"
@@ -166,7 +165,7 @@ module Workflows =
           OrderLines = lines
           AmountToBill = amountToBill.Amount
         }
-        Ok pricedOrder
+        pricedOrder
   module Acknowledgement =
     let acknowledgeOrder: AcknowledgeOrder =
       fun createAcknowledgementLetter sendAcknowledgement pricedOrder ->
@@ -220,12 +219,26 @@ module Workflows =
         yield! events2
         yield! events3
       ]
-  // let placeOrder unvalidatedOrder =
-  //   unvalidatedOrder
-  //   |> validateOrder
-  //   |> priceOrder
-  //   |> acknowledgeOrder
-  //   |> createEvents
+  let placeOrder
+    checkProductCodeExists
+    checkAddressExists
+    getProductPrice
+    createOrderAcknowledgementLetter
+    sendOrderAcknowledgement
+    : PlaceOrder =
+      fun unvalidatedOrder ->
+        let validatedOrder =
+          unvalidatedOrder
+          |> Validate.validateOrder checkProductCodeExists checkAddressExists
+        let pricedOrder =
+          validatedOrder
+          |> Pricing.priceOrder getProductPrice
+        let acknowledgementOption =
+          pricedOrder
+          |> Acknowledgement.acknowledgeOrder createOrderAcknowledgementLetter sendOrderAcknowledgement
+        let events =
+          createEvents pricedOrder acknowledgementOption
+        Ok events
 
 module Uncategorized =
   // Processes
