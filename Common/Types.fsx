@@ -7,6 +7,20 @@ type Undefined = exn
 type Result<'Success, 'Failure> =
   | Ok of 'Success
   | Error of 'Failure
+module Result =
+  let bind f aResult =
+    match aResult with
+      | Ok value -> f value
+      | Error failure -> Error failure
+  let map f aResult =
+    match aResult with
+      | Ok value -> Ok (f value)
+      | Error failure -> Error failure
+  let mapError f aResult =
+    match aResult with
+      | Ok value -> Ok value
+      | Error failure -> Error (f failure)
+
 type AsyncResult<'Success, 'Failure> = Async<Result<'Success, 'Failure>>
 module AsyncResult =
   let resolve res = async { return res }

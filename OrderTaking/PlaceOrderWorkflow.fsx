@@ -27,10 +27,14 @@ module Types =
     }
 
   module Errors =
-    type AddressValidationError = AddressValidationError of string
+    type AddressValidationError =
+      | InvalidFomat of string
+      | AddressNotFound of string
     type PricingError = PricingError of ValidationError
+    type RemoteServiceError = RemoteServiceError of string
     type PlaceOrderError =
-      | ValidationError of ValidationError list
+      | Validation of ValidationError
+      | Pricing of PricingError
 
   module Validate =
     open Internal
@@ -82,10 +86,11 @@ module Types =
       CheckProductCodeExists -> // dependency
         CheckAddressExists -> // dependency
         UnvalidatedOrder -> // input
-        ValidatedOrder // output
+        Result<ValidatedOrder, ValidationError> // output
 
   module Pricing =
     open Validate
+    open Errors
 
     type GetProductPrice =
       ProductCode -> Price
@@ -93,7 +98,7 @@ module Types =
     type PriceOrder =
       GetProductPrice -> // dependency
         Validate.ValidatedOrder -> // input
-        PricedOrder // result indicating that there might be pricing error cause pricing is an error-prone process
+        Result<PricedOrder, PricingError> // result indicating that there might be pricing error cause pricing is an error-prone process
 
   module Acknowledgement =
     open Internal
@@ -143,8 +148,14 @@ module Types =
   type PlaceOrder = Internal.UnvalidatedOrder -> Result<Events.PlaceOrderEvent list, Errors.PlaceOrderError>
 
 module Implementation =
+  open Types
+  open Types.Internal
+  open Types.Validate
+  open Types.Pricing
+  open Types.Acknowledgement
+  open Types.Errors
+
   module Validate =
-    open Types.Validate
     let toCustomerInfo (customer: UnvalidatedCustomerInfo): CustomerInfo =
       let firstName = customer.FirstName |> String50.create
       let lastName = customer.LastName |> String50.create
@@ -241,11 +252,13 @@ module Implementation =
           OrderLines = orderLines
           AmountToBill = amountToBill
         }
-        validatedOrder
+        Ok validatedOrder
+    let validateOrderAdapted checkProductCodeExists checkAddressExists unvalidatedOrder =
+      unvalidatedOrder
+      |> validateOrder checkProductCodeExists checkAddressExists
+      |> Result.mapError PlaceOrderError.Validation
 
   module Pricing =
-    open Types.Validate
-    open Types.Pricing
     let getProductPrice (productCode: ProductCode): Price =
       failwith "not implemented"
     let toPricedOrderLine getProductPrice (line: ValidatedOrderLine): PricedOrderLine =
@@ -277,13 +290,13 @@ module Implementation =
           OrderLines = lines
           AmountToBill = amountToBill.Amount
         }
-        pricedOrder
+        Ok pricedOrder
+    let priceOrderAdapted getProductPrice validatedOrder =
+      validatedOrder
+      |> priceOrder getProductPrice
+      |> Result.mapError PlaceOrderError.Pricing
 
   module Acknowledgement =
-    open Types.Internal
-    open Types.Validate
-    open Types.Acknowledgement
-
     let acknowledgeOrder: AcknowledgeOrder =
       fun createAcknowledgementLetter sendAcknowledgement pricedOrder ->
         let letter = createAcknowledgementLetter pricedOrder
@@ -303,9 +316,9 @@ module Implementation =
             None
 
   module Events =
-    open Types
     open Types.Validate
     open Types.Events
+
     let createBillingEvents (placedOrder: PricedOrder): BillableOrderPlaced option =
       let billingAmount = placedOrder.AmountToBill |> BillingAmount.value
       if billingAmount > 0m then
@@ -341,23 +354,22 @@ module Implementation =
           yield! events2
           yield! events3
         ]
-    let placeOrder
-      checkProductCodeExists
-      checkAddressExists
-      getProductPrice
-      createOrderAcknowledgementLetter
-      sendOrderAcknowledgement
-      : PlaceOrder =
-        fun unvalidatedOrder ->
-          let validatedOrder =
-            unvalidatedOrder
-            |> Validate.validateOrder checkProductCodeExists checkAddressExists
-          let pricedOrder =
-            validatedOrder
-            |> Pricing.priceOrder getProductPrice
-          let acknowledgementOption =
-            pricedOrder
-            |> Acknowledgement.acknowledgeOrder createOrderAcknowledgementLetter sendOrderAcknowledgement
-          let events =
-            createEvents pricedOrder acknowledgementOption
-          Ok events
+  let placeOrder
+    checkProductCodeExists
+    checkAddressExists
+    getProductPrice
+    createOrderAcknowledgementLetter
+    sendOrderAcknowledgement
+    // Reading Chapter 10 Using bind and map in Our Pipeline and it won't compile
+    // So I just gave up this part and asked GPT for a nice implementation
+    // Coming back to solve it after reading next section
+    : PlaceOrder =
+      fun unvalidatedOrder ->
+        unvalidatedOrder
+        |> Validate.validateOrderAdapted checkProductCodeExists checkAddressExists
+        |> Result.bind (Pricing.priceOrderAdapted getProductPrice)
+        |> Result.bind (fun pricedOrder ->
+            match Acknowledgement.acknowledgeOrder createOrderAcknowledgementLetter sendOrderAcknowledgement pricedOrder with
+            | Some ack -> Ok (pricedOrder, Some ack)
+            | None -> Ok (pricedOrder, None))
+        |> Result.map (fun (pricedOrder, ack) -> Events.createEvents pricedOrder ack)
